@@ -1,2 +1,9 @@
-<h1>Welcome to SvelteKit</h1>
-<p>Visit <a href="https://kit.svelte.dev">kit.svelte.dev</a> to read the documentation</p>
+<form action="http://localhost:6969/login" method="post">
+    <label for="email">Email</label>
+    <input type="email" id="email" name="email" />
+    <label for="password">Password</label>
+    <input type="password" id="password" name="password" />
+    <label for="monitor_id">Monitor</label>
+    <input type="text" id="monitor_id" name="monitor_id" />
+    <button type="submit">Submit</button>
+</form>
