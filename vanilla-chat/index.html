@@ -19,40 +19,88 @@
         // Example from https://developer.mozilla.org/en-US/docs/Web/API/WebSockets_API/Writing_a_WebSocket_server_in_JavaScript_Deno
         // run using npx serve ../vanilla-chat
 
-        const wsUri = "ws://127.0.0.1:6969/chat/1231231swda22";
-        const output = document.querySelector("#output");
-        const websocket = new WebSocket(wsUri);
-        let pingInterval;
+        /* // Alternative to sending the token via header or cookie
+        websocket.onMessage = (e) => { // send the token onMessage as message, onOpen doesn't support messages..., meaning this would increase complexity and ddos potential (denial of service)
+            websocket.send(JSON.stringify({
+                type: 'set-auth-token',
+                data: token
+            }));
+        };
+        */
 
-        function writeToScreen(message) {
-            output.insertAdjacentHTML("afterbegin", `<p>${message}</p>`);
-        }
+        /**
+         * https://stackoverflow.com/questions/4361173/http-headers-in-websockets-client-api
+         * https://stackoverflow.com/questions/76974101/how-postman-can-send-customer-headers-in-websocket
+         * https://stackoverflow.com/questions/39858493/can-a-websocket-client-in-a-browser-send-headers
+         * 
+         * https://stackoverflow.com/a/77060459/17421351
+         * Nothing has changed in the 12(!) years since this question was opened. 
+         * The JavaScript WebSocket API is abandoned by all browser vendors (although the implementations do occasionally get updates), 
+         * and the new specs (WebSocket Stream and WebTransport) are nowhere close to materialization. What this all means is that WebSockets 
+         * are still widely used, no replacement for the broken API exists despite it being called "legacy" 7 years ago, 
+         * and the problems outlined in the question are as annoying as ever, if not more.
+         */
 
-        function sendMessage(message) {
-            writeToScreen(`SENT: ${message}`);
-            websocket.send(message);
-        }
+        // login, send header, connect to websocket
+        const monitor_id = 'w32tgse';
+        fetch('http://127.0.0.1:6969/login', {
+            method: 'POST',
+            body: JSON.stringify({
+                email: 'j.froe@gmx.at',
+                password: 'password',
+                monitor_id: monitor_id
+            }),
+            headers: {
+                "content-type": "application/json"
+            }
+        })
+            .then(response => response.text())
+            .then(token => {
+                connectToWebSocket(token);
+            });
 
-        websocket.onopen = (e) => {
-            writeToScreen("CONNECTED");
-            sendMessage("ping");
-            pingInterval = setInterval(() => {
+        function connectToWebSocket(token) {
+            const wsUri = "ws://localhost:6969/chat/" + monitor_id + '?auth=' + token; // Looks really dangerous, but it is not that wild, and recommended by people working on the Websocket API.
+            const output = document.querySelector("#output");
+            const websocket = new WebSocket(wsUri);
+            let pingInterval;
+
+            /* websocket?.onbeforeopen = (e) => { // Not supported by all browsers
+                e.target.headers = {
+                    'Authorization': `Bearer ${token}`
+                };
+            }; */
+
+            function writeToScreen(message) {
+                output.insertAdjacentHTML("afterbegin", `<p>${message}</p>`);
+            }
+
+            function sendMessage(message) {
+                writeToScreen(`SENT: ${message}`);
+                websocket.send(message);
+            }
+
+            websocket.onopen = (e) => {
+                writeToScreen("CONNECTED");
                 sendMessage("ping");
-            }, 5000);
-        };
+                pingInterval = setInterval(() => {
+                    sendMessage("ping");
+                }, 5000);
+            };
 
-        websocket.onclose = (e) => {
-            writeToScreen("DISCONNECTED");
-            clearInterval(pingInterval);
-        };
+            websocket.onclose = (e) => {
+                writeToScreen("DISCONNECTED");
+                clearInterval(pingInterval);
+            };
 
-        websocket.onmessage = (e) => {
-            writeToScreen(`RECEIVED: ${e.data}`);
-        };
+            websocket.onmessage = (e) => {
+                writeToScreen(`RECEIVED: ${e.data}`);
+            };
 
-        websocket.onerror = (e) => {
-            writeToScreen(`ERROR: ${e.data}`);
-        };
+            websocket.onerror = (e) => {
+                writeToScreen(`ERROR: ${e.data}`);
+            };
+        }
     </script>
 </body>
 
