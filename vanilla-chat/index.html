@@ -12,7 +12,15 @@
     <div class="p-8 prose">
         <h1>Vanilla Chat Client Demo</h1>
 
-        <div id="output"></div>
+        <div class="relative flex flex-col overflow-auto h-96" id="output"></div>
+
+        <form id="input-form">
+            <input type="text" name="message" id="message" placeholder="Message">
+            <button class="h-full px-4 py-2 text-gray-200 bg-gray-800" type="button"
+                onclick="sendMessage(document.getElementById('message'))">
+                Send
+            </button>
+        </form>
     </div>
 
     <script>
@@ -59,10 +67,28 @@
                 connectToWebSocket(token);
             });
 
+        let websocket;
+
+        const output = document.getElementById("output");
+        function sendMessage(messageInput) {
+            const message = messageInput.value.trim();
+
+            if (websocket/*  && websocket.readyState === WebSocket.OPEN */) {
+                if (message) {
+                    if (message !== "ping") writeToScreen(`<span class='text-left'>${message}</span>`);
+                    websocket.send(message);
+                    messageInput.value = '';
+                }
+            }
+        }
+
+        function writeToScreen(message) {
+            output.innerHTML += message;
+        }
+
         function connectToWebSocket(token) {
             const wsUri = "ws://localhost:6969/chat/" + monitor_id + '?auth=' + token; // Looks really dangerous, but it is not that wild, and recommended by people working on the Websocket API.
-            const output = document.querySelector("#output");
-            const websocket = new WebSocket(wsUri);
+            websocket = new WebSocket(wsUri);
             let pingInterval;
 
             /* websocket?.onbeforeopen = (e) => { // Not supported by all browsers
@@ -71,17 +97,8 @@
                 };
             }; */
 
-            function writeToScreen(message) {
-                output.insertAdjacentHTML("afterbegin", `<p>${message}</p>`);
-            }
-
-            function sendMessage(message) {
-                writeToScreen(`SENT: ${message}`);
-                websocket.send(message);
-            }
-
             websocket.onopen = (e) => {
-                writeToScreen("CONNECTED");
+                writeToScreen("<span class='sticky top-0 left-0 px-2 font-black bg-gray-300 text-lime-900'>CONNECTED</span>");
                 sendMessage("ping");
                 pingInterval = setInterval(() => {
                     sendMessage("ping");
@@ -89,16 +106,16 @@
             };
 
             websocket.onclose = (e) => {
-                writeToScreen("DISCONNECTED");
+                writeToScreen("<span class='sticky top-0 left-0 px-2 font-black text-red-800 bg-gray-300'>CLOSED</span>");
                 clearInterval(pingInterval);
             };
 
             websocket.onmessage = (e) => {
-                writeToScreen(`RECEIVED: ${e.data}`);
+                writeToScreen(`<span class='text-right'>${e.data}</span>`);
             };
 
             websocket.onerror = (e) => {
-                writeToScreen(`ERROR: ${e.data}`);
+                writeToScreen(`<span class='sticky top-0 left-0 px-2 font-black text-red-800 bg-gray-300'>ERROR</span>`);
             };
         }
     </script>
