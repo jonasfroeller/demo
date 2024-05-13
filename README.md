@@ -1,5 +1,5 @@
-# GH_Pages-AutoPublish
+# Propromo Demos
 
-Publish Markdown-files automatically on push.
-Images and .md files are automatically pushed to gh-pages.
-Styling is applied by <https://github.com/sindresorhus/github-markdown-css>.
+> This repository is for the demonstration of small MVPs, Propromo needs to function properly. A playground for new big features.
+
+[View the demos](https://propromo-software.github.io/demo).
