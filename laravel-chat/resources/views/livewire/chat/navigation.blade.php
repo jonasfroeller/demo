@@ -1,4 +1,4 @@
-<nav class="-mx-3 flex flex-1 justify-end">
+<nav class="flex justify-end flex-1 -mx-3">
     @auth
         <a
             href="{{ url('/dashboard') }}"
