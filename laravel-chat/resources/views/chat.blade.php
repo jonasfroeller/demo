@@ -27,7 +27,7 @@
                     </header>
 
                     <main class="min-h-screen">
-                        CHAT
+                        <livewire:chat.client /> <!-- TODO: fix me -->
                     </main>
 
                     <footer class="py-16 text-sm text-center text-black dark:text-white/70">
