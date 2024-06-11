@@ -3,7 +3,7 @@
 use Illuminate\Support\Facades\Route;
 use App\Livewire\ChatClient;
 
-Route::view('/', 'chat');
+Route::get('/', ChatClient::class);
 
 Route::view('dashboard', 'dashboard')
     ->middleware(['auth', 'verified'])
