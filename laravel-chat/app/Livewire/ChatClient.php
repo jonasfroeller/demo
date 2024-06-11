@@ -48,7 +48,7 @@ class ChatClient extends Component
 
         $json = $response->json();
         $this->token = $json['token'];
-        $this->chats = $json['chats']; // TODO: fix Property type not supported in Livewire for property: [{}]
+        $this->chats = $json['chats'];
 
         $this->connectToWebSocket();
     }
