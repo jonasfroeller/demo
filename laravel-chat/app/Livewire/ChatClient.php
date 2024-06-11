@@ -5,12 +5,16 @@ namespace App\Livewire;
 use Livewire\Component;
 use Illuminate\Support\Facades\Http;
 use WebSocket\Client as WebSocketClient; # waiting for v3 release (Declaration of WebSocket\Client::setLogger(Psr\Log\LoggerInterface $logger): WebSocket\Client must be compatible with Psr\Log\LoggerAwareInterface::setLogger(Psr\Log\LoggerInterface $logger): void)
+use WebSocket\Middleware as WebSocketMiddleware;
+use WebSocket\Connection as WebSocketConnection;
+use WebSocket\Message\Message as WebSocketMessage;
 
 class ChatClient extends Component
 {
     public $message;
-    public $monitorId = 'w32tgse';
+    public $monitorId = '$2y$12$W3pHWdAtePn1wjCm4.t4xO9lY9jOcu8/5SC0bDEsaAfSB8pKA5k.K';
     public $token;
+    public $chats;
     public $websocket;
     public $output = '';
 
@@ -21,54 +25,57 @@ class ChatClient extends Component
 
     public function login()
     {
-        $response = Http::post('http://127.0.0.1:6969/login', [
-            'email' => 'j.froe@gmx.at',
-            'password' => 'password',
-            'onitor_id' => $this->monitorId,
+        $response = Http::post('http://localhost:6969/login', [
+            'email' => 'username@domain.tld',
+            'password' => 'password'
         ]);
 
-        $this->token = $response->body();
+        $json = $response->json();
+        $this->token = $json['token'];
+        $this->chats = $json['chats'];
         $this->connectToWebSocket();
     }
 
     public function connectToWebSocket()
     {
-        $wsUri = "ws://localhost:6969/chat/{$this->monitorId}?auth={$this->token}";
+        $monitorId = rawurlencode($this->monitorId);
+        $wsUri = "ws://localhost:6969/chat/{$monitorId}?auth={$this->token}";
         $this->websocket = new WebSocketClient($wsUri);
 
-        $this->websocket->onOpen = function () {
+        $this->websocket
+        ->addMiddleware(new WebSocketMiddleware\CloseHandler())
+        ->addMiddleware(new WebSocketMiddleware\PingResponder())
+        ->onText(function (WebSocketClient $client, WebSocketConnection $connection, WebSocketMessage $message) {
+            $this->output.= "<span class='text-right'>{$message->getContent()}</span>";
+        })
+        ->onConnect(function (WebSocketClient $client, WebSocketConnection $connection) { // no onOpen implementation in phrity/websocket
             $this->output.= "<span class='sticky top-0 left-0 px-2 font-black bg-gray-300 text-lime-900'>CONNECTED</span>";
-            $this->sendMessage('ping');
-            /* pingInterval = setInterval(function () { // TODO: implement ping
-                $this->sendMessage('ping');
-            }, 5000); */
-        };
-
-        $this->websocket->onClose = function () {
+        })
+        ->onClose(function (WebSocketClient $client, WebSocketConnection $connection) {
             $this->output.= "<span class='sticky top-0 left-0 px-2 font-black text-red-800 bg-gray-300'>CLOSED</span>";
-            /* clearInterval($this->pingInterval); */ // TODO: implement ping
-        };
-
-        $this->websocket->onMessage = function ($e) {
-            $this->output.= "<span class='text-right'>{$e->getContent()}</span>";
-        };
-
-        $this->websocket->onError = function () {
+        })
+        ->onError(function (WebSocketClient $client, WebSocketConnection $connection) {
             $this->output.= "<span class='sticky top-0 left-0 px-2 font-black text-red-800 bg-gray-300'>ERROR</span>";
-        };
+        })
+        ->start();
     }
 
     public function sendMessage($message)
     {
         if ($this->websocket && $message) {
             $this->output.= "<span class='text-left'>{$message}</span>";
-            $this->websocket->send($message);
+            $this->websocket->text($message);
             $this->message = '';
         }
     }
 
+    public function closeConnection()
+    {
+        $this->websocket->close();
+    }
+
     public function render()
     {
-        return view('livewire.chat-client');
+        return view('livewire.chat.client');
     }
 }
