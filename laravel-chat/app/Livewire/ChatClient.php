@@ -11,15 +11,28 @@ use WebSocket\Middleware as WebSocketMiddleware;
 use WebSocket\Connection as WebSocketConnection;
 use WebSocket\Message\Message as WebSocketMessage;
 
+class ChatDTO
+{
+    public $monitor_hash = '';
+    public $organization_name = '';
+    public $type = '';
+    public $title = '';
+    public $short_description = '';
+    public $public = false;
+    public $created_at = '';
+    public $updated_at = '';
+    public $project_url = '';
+}
+
 class ChatClient extends Component
 {
-    public $message;
-    public $monitorId = '$2y$12$W3pHWdAtePn1wjCm4.t4xO9lY9jOcu8/5SC0bDEsaAfSB8pKA5k.K';
-    public $token;
-    public $chats;
-    public $output = '';
-
-    protected $websocket;
+    public WebSocketMessage $message;
+    public String $monitorId = '$2y$12$W3pHWdAtePn1wjCm4.t4xO9lY9jOcu8/5SC0bDEsaAfSB8pKA5k.K';
+    public String $token;
+    /** @var ChatDTO[] */
+    public array $chats;
+    public String $output = '';
+    private WebSocketClient $websocket;
 
     public function mount()
     {
@@ -35,7 +48,8 @@ class ChatClient extends Component
 
         $json = $response->json();
         $this->token = $json['token'];
-        $this->chats = $json['chats'];
+        $this->chats = $json['chats']; // TODO: fix Property type not supported in Livewire for property: [{}]
+
         $this->connectToWebSocket();
     }
 
