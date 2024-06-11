@@ -42,9 +42,8 @@ class ChatClient extends Component
         $wsUri = "ws://localhost:6969/chat/{$monitorId}?auth={$this->token}";
         $this->websocket = new WebSocketClient($wsUri);
 
-        $this->websocket
+        $this->websocket // TODO: implement ping - ping every 2 or 3 seconds
         ->addMiddleware(new WebSocketMiddleware\CloseHandler())
-        ->addMiddleware(new WebSocketMiddleware\PingResponder())
         ->onText(function (WebSocketClient $client, WebSocketConnection $connection, WebSocketMessage $message) {
             $this->output.= "<span class='text-right'>{$message->getContent()}</span>";
         })
