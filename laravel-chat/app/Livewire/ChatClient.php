@@ -182,7 +182,7 @@ class ChatClient extends Component
             $modifiedChats[$monitorId] = $chat;
             $modifiedChats[$monitorId]['websocket'] = new WebSocketClient($wsUri);
 
-            $modifiedChats[$monitorId]['websocket'] // TODO: implement ping - ping every 2 or 3 seconds
+            $modifiedChats[$monitorId]['websocket']
                 ->addMiddleware(new WebSocketMiddleware\CloseHandler())
                 ->onText(function (WebSocketClient $client, WebSocketConnection $connection, WebSocketMessage $message) {
                     $monitorId = self::getMonitorOfClient($client);
@@ -197,6 +197,12 @@ class ChatClient extends Component
                 ->onConnect(function (WebSocketClient $client, WebSocketConnection $connection) {
                     $messageAsHTML = "<span class='sticky top-0 left-0 px-2 font-black bg-gray-300 text-lime-900'>CONNECTED</span>";
                     $this->dispatch('messageReceived', $messageAsHTML);
+
+                    $monitorId = self::getMonitorOfClient($client);
+                    while ($this->chats->getChats()[$monitorId]['websocket']->isConnected()) {
+                        self::sendMessage($monitorId, 'ping');
+                        sleep(5);
+                    }
                 })
                 ->onClose(function (WebSocketClient $client, WebSocketConnection $connection) {
                     $messageAsHTML = "<span class='sticky top-0 left-0 px-2 font-black text-red-800 bg-gray-300'>CLOSED</span>";
