@@ -60,6 +60,7 @@ class ChatConnectionsDTO
      *         'messages' => ChatMessageDTO[]
      *     },
      *     'websocket' => WebSocketClient,
+     *     'lastPing' => float
      * }>
      */
     private array $chats;
@@ -105,6 +106,33 @@ class ChatConnectionsDTO
     public function getWebsocket(String $monitorId): object
     {
         return $this->chats[$monitorId]['websocket'];
+    }
+
+    public function getDetail(String $monitorId): object
+    {
+        return $this->chats[$monitorId]['info']['detail'];
+    }
+
+    public function getMessages(String $monitorId): object
+    {
+        return $this->chats[$monitorId]['info']['messages'];
+    }
+
+    public function addMessage(String $monitorId, ChatMessageDTO $messages): self
+    {
+        array_push($this->chats[$monitorId]['info']['messages'], $messages);
+        return $this;
+    }
+
+    public function getLastPing(String $monitorId): float
+    {
+        return $this->chats[$monitorId]['lastPing'];
+    }
+
+    public function setLastPing(String $monitorId, float $lastPing): self
+    {
+        $this->chats[$monitorId]['lastPing'] = $lastPing;
+        return $this;
     }
 }
 
@@ -198,7 +226,8 @@ class ChatClient extends Component
                 ->addMiddleware(new WebSocketMiddleware\CloseHandler())
                 ->onText(function (WebSocketClient $client, WebSocketConnection $connection, WebSocketMessage $message) {
                     $monitorId = self::getMonitorOfClient($client);
-                    $this->chats[$monitorId]['info']['messages']->array_push(new ChatMessageDTO($message->getContent()));
+                    $chatMessage = new ChatMessageDTO($message->getContent());
+                    $this->chats->addMessage($monitorId, $chatMessage);
 
                     $messageAsHTML = "<span class='text-right'>{$message->getContent()}</span>";
                     $this->dispatch('messageReceived', [
@@ -211,10 +240,12 @@ class ChatClient extends Component
                     $this->dispatch('messageReceived', $messageAsHTML);
 
                     $monitorId = self::getMonitorOfClient($client);
+                    $this->chats->setLastPing($monitorId, microtime(true));
+                    /* $monitorId = self::getMonitorOfClient($client);
                     while ($this->chats->getWebsocket($monitorId)->isConnected()) {
                         self::sendMessage($monitorId, 'ping');
                         sleep(5);
-                    }
+                    } */
                 })
                 ->onClose(function (WebSocketClient $client, WebSocketConnection $connection) {
                     $messageAsHTML = "<span class='sticky top-0 left-0 px-2 font-black text-red-800 bg-gray-300'>CLOSED</span>";
@@ -224,10 +255,26 @@ class ChatClient extends Component
                     $messageAsHTML = "<span class='sticky top-0 left-0 px-2 font-black text-red-800 bg-gray-300'>ERROR</span>";
                     $this->dispatch('messageReceived', $messageAsHTML);
                 })
+                ->setTimeout(5)
+                /* ->onTick(function (WebSocketClient $client, WebSocketConnection $connection) {
+                    $monitorId = self::getMonitorOfClient($client);
+                    $connection->text('ping');
+                }) */
+                ->onTick(function (WebSocketClient $client) {
+                    /* $client->ping('ping'); doesn't work */
+                    self::ping($client);
+                })
                 ->start();
         }
 
         dump($this->chats);
+    }
+
+    public function ping(WebSocketClient $client)
+    {
+        $monitorId = self::getMonitorOfClient($client);
+        self::sendMessage($monitorId, 'ping');
+        $this->chats->setLastPing($monitorId, microtime(true));
     }
 
     public function sendMessage(String $monitorId, String $message)
