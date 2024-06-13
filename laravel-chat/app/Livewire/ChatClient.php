@@ -96,6 +96,16 @@ class ChatConnectionsDTO
     {
         return $this->chats;
     }
+
+    public function getChat(String $monitorId): array
+    {
+        return $this->chats[$monitorId];
+    }
+
+    public function getWebsocket(String $monitorId): object
+    {
+        return $this->chats[$monitorId]['websocket'];
+    }
 }
 
 class ChatClient extends Component
@@ -182,6 +192,7 @@ class ChatClient extends Component
 
             $modifiedChats[$monitorId] = $chat;
             $modifiedChats[$monitorId]['websocket'] = new WebSocketClient($wsUri);
+            $this->chats->setChats($modifiedChats);
 
             $modifiedChats[$monitorId]['websocket']
                 ->addMiddleware(new WebSocketMiddleware\CloseHandler())
@@ -200,7 +211,7 @@ class ChatClient extends Component
                     $this->dispatch('messageReceived', $messageAsHTML);
 
                     $monitorId = self::getMonitorOfClient($client);
-                    while ($this->chats->getChats()[$monitorId]['websocket']->isConnected()) {
+                    while ($this->chats->getWebsocket($monitorId)->isConnected()) {
                         self::sendMessage($monitorId, 'ping');
                         sleep(5);
                     }
@@ -216,22 +227,22 @@ class ChatClient extends Component
                 ->start();
         }
 
-        $this->chats->setChats($modifiedChats);
-
         dump($this->chats);
     }
 
     public function sendMessage(String $monitorId, String $message)
     {
+        $websocket = $this->chats->getWebsocket($monitorId);
+
         if (
-            !isset($this->chats[$monitorId]['websocket']) ||
-            !$this->chats[$monitorId]['websocket'] instanceof WebSocketClient ||
-            !$this->chats[$monitorId]['websocket']->isConnected()
+            !isset($websocket) ||
+            !$websocket instanceof WebSocketClient ||
+            !$websocket->isConnected()
         ) {
             return;
         }
 
-        $this->chats[$monitorId]['websocket']->text($message);
+        $websocket->text($message);
 
         $messageAsHTML = "<span class='text-right'>{$message}</span>";
         $this->dispatch('messageSent', [
