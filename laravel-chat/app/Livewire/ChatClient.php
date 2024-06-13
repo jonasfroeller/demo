@@ -4,7 +4,7 @@ namespace App\Livewire;
 
 # waiting for v3 release (Declaration of WebSocket\Client::setLogger(Psr\Log\LoggerInterface $logger): WebSocket\Client must be compatible with Psr\Log\LoggerAwareInterface::setLogger(Psr\Log\LoggerInterface $logger): void)
 
-// TODO: implement joining, only if user clicks chat in ui, to reduce server load and loading time
+// TODO: implement joining, only if user clicks chat in ui, to reduce server load and loading time (far future)
 
 use Livewire\Component;
 use Illuminate\Support\Facades\Http;
@@ -104,7 +104,7 @@ class ChatClient extends Component
     public String $password = 'password';
     public String | null $token = null;
 
-    public ?ChatConnectionsDTO $chats = null;
+    private ?ChatConnectionsDTO $chats = null;
 
     public function mount()
     {
@@ -161,9 +161,7 @@ class ChatClient extends Component
                 $chats = $json['chats'];
 
                 $chatMap = self::parseChats($chats);
-
                 $this->chats->setChats($chatMap);
-                dump($this->chats);
 
                 $this->connectToWebSockets();
             } else {
@@ -176,13 +174,15 @@ class ChatClient extends Component
 
     public function connectToWebSockets()
     {
-        foreach ($this->chats as $chat) {
+        $modifiedChats = [];
+        foreach ($this->chats->getChats() as $chat) {
             $monitorId = rawurlencode($chat['info']['detail']->monitor_hash);
             $wsUri = self::getChatUrl($monitorId, $this->token);
 
-            $this->chats[$monitorId]['websocket'] = new WebSocketClient($wsUri);
+            $modifiedChats[$monitorId] = $chat;
+            $modifiedChats[$monitorId]['websocket'] = new WebSocketClient($wsUri);
 
-            $this->chats[$monitorId]['websocket'] // TODO: implement ping - ping every 2 or 3 seconds
+            $modifiedChats[$monitorId]['websocket'] // TODO: implement ping - ping every 2 or 3 seconds
                 ->addMiddleware(new WebSocketMiddleware\CloseHandler())
                 ->onText(function (WebSocketClient $client, WebSocketConnection $connection, WebSocketMessage $message) {
                     $monitorId = self::getMonitorOfClient($client);
@@ -208,6 +208,10 @@ class ChatClient extends Component
                 })
                 ->start();
         }
+
+        $this->chats->setChats($modifiedChats);
+
+        dump($this->chats);
     }
 
     public function sendMessage(String $monitorId, String $message)
