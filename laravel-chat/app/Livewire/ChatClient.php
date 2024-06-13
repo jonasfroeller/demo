@@ -115,7 +115,7 @@ class ChatClient extends Component
 
     public static function getChatUrl($monitorHash, $auth)
     {
-        return "ws://localhost:6969/chat/{$monitorHash}?auth={$auth}";
+        return "ws://localhost:6969/chat/$monitorHash?auth=$auth";
     }
 
     public static function getMonitorOfClient(WebSocketClient $client)
@@ -125,7 +125,7 @@ class ChatClient extends Component
         $path = explode('/', $parts['path']);
         $monitorHash = end($path);
 
-        return $monitorHash;
+        return rawurldecode($monitorHash);
     }
 
     public static function parseChats($chats)
@@ -176,8 +176,9 @@ class ChatClient extends Component
     {
         $modifiedChats = [];
         foreach ($this->chats->getChats() as $chat) {
-            $monitorId = rawurlencode($chat['info']['detail']->monitor_hash);
-            $wsUri = self::getChatUrl($monitorId, $this->token);
+            $monitorId = $chat['info']['detail']->monitor_hash;
+            $monitor_hash = rawurlencode($monitorId);
+            $wsUri = self::getChatUrl($monitor_hash, $this->token);
 
             $modifiedChats[$monitorId] = $chat;
             $modifiedChats[$monitorId]['websocket'] = new WebSocketClient($wsUri);
