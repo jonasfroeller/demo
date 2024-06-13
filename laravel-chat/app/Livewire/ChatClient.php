@@ -225,15 +225,17 @@ class ChatClient extends Component
             $modifiedChats[$monitorId]['websocket']
                 ->addMiddleware(new WebSocketMiddleware\CloseHandler())
                 ->onText(function (WebSocketClient $client, WebSocketConnection $connection, WebSocketMessage $message) {
-                    $monitorId = self::getMonitorOfClient($client);
-                    $chatMessage = new ChatMessageDTO($message->getContent());
-                    $this->chats->addMessage($monitorId, $chatMessage);
+                    if (!($message->getContent() === 'ping') && !($message->getContent() === 'pong')) {
+                        $monitorId = self::getMonitorOfClient($client);
+                        $chatMessage = new ChatMessageDTO($message->getContent());
+                        $this->chats->addMessage($monitorId, $chatMessage);
 
-                    $messageAsHTML = "<span class='text-right'>{$message->getContent()}</span>";
-                    $this->dispatch('messageReceived', [
-                        'monitorId' => $monitorId,
-                        'message' => $messageAsHTML
-                    ]);
+                        $messageAsHTML = "<span class='text-right'>{$message->getContent()}</span>";
+                        $this->dispatch('messageReceived', [
+                            'monitorId' => $monitorId,
+                            'message' => $messageAsHTML
+                        ]);
+                    }
                 })
                 ->onConnect(function (WebSocketClient $client, WebSocketConnection $connection) {
                     $messageAsHTML = "<span class='sticky top-0 left-0 px-2 font-black bg-gray-300 text-lime-900'>CONNECTED</span>";
@@ -242,10 +244,10 @@ class ChatClient extends Component
                     $monitorId = self::getMonitorOfClient($client);
                     $this->chats->setLastPing($monitorId, microtime(true));
                     /* $monitorId = self::getMonitorOfClient($client);
-                    while ($this->chats->getWebsocket($monitorId)->isConnected()) {
-                        self::sendMessage($monitorId, 'ping');
-                        sleep(5);
-                    } */
+                while ($this->chats->getWebsocket($monitorId)->isConnected()) {
+                    self::sendMessage($monitorId, 'ping');
+                    sleep(5);
+                } */
                 })
                 ->onClose(function (WebSocketClient $client, WebSocketConnection $connection) {
                     $messageAsHTML = "<span class='sticky top-0 left-0 px-2 font-black text-red-800 bg-gray-300'>CLOSED</span>";
@@ -257,8 +259,8 @@ class ChatClient extends Component
                 })
                 ->setTimeout(5)
                 /* ->onTick(function (WebSocketClient $client, WebSocketConnection $connection) {
-                    $monitorId = self::getMonitorOfClient($client);
-                    $connection->text('ping');
+                $monitorId = self::getMonitorOfClient($client);
+                $connection->text('ping');
                 }) */
                 ->onTick(function (WebSocketClient $client) {
                     /* $client->ping('ping'); doesn't work */
