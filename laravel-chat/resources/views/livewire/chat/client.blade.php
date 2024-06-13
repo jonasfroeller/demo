@@ -1,8 +1,7 @@
 <div class="p-8 prose">
     <h1>Laravel Chat Client Demo</h1>
 
-    <div class="relative flex flex-col overflow-auto h-96" id="output">
-        {!! $output !!}
+    <div class="relative flex flex-col overflow-auto h-96" id="output"> <!-- TODO: listen to livewire event -->
     </div>
 
     <form wire:submit.prevent="sendMessage">
